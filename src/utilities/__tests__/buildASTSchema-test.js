@@ -538,29 +538,26 @@ type Query {
     const ast = parse(body);
     const schema = buildASTSchema(ast);
 
-    expect(schema.getType('MyEnum').getValues()).to.deep.equal([
-      {
-        name: 'VALUE',
-        description: '',
-        isDeprecated: false,
-        deprecationReason: undefined,
-        value: 'VALUE'
-      },
-      {
-        name: 'OLD_VALUE',
-        description: '',
-        isDeprecated: true,
-        deprecationReason: 'No longer supported',
-        value: 'OLD_VALUE'
-      },
-      {
-        name: 'OTHER_VALUE',
-        description: '',
-        isDeprecated: true,
-        deprecationReason: 'Terrible reasons',
-        value: 'OTHER_VALUE'
-      }
-    ]);
+    const myEnum = schema.getType('MyEnum');
+
+    const value = myEnum.getValue('VALUE');
+    expect(value.isDeprecated).to.equal(false);
+    expect(value.appliedDirectives.isApplied('deprecated')).to.equal(false);
+
+    const oldValue = myEnum.getValue('OLD_VALUE');
+    expect(oldValue.isDeprecated).to.equal(true);
+    expect(oldValue.deprecationReason).to.equal('No longer supported');
+    expect(oldValue.appliedDirectives.isApplied('deprecated')).to.equal(true);
+    expect(oldValue.appliedDirectives.getDirectiveArgs('deprecated'))
+      .to.deep.equal({reason: 'No longer supported'});
+
+    const otherValue = myEnum.getValue('OTHER_VALUE');
+    expect(otherValue.isDeprecated).to.equal(true);
+    expect(otherValue.deprecationReason).to.equal('Terrible reasons');
+    expect(otherValue.appliedDirectives.isApplied('deprecated'))
+      .to.equal(true);
+    expect(otherValue.appliedDirectives.getDirectiveArgs('deprecated'))
+      .to.deep.equal({reason: 'Terrible reasons'});
 
     const rootFields = schema.getType('Query').getFields();
     expect(rootFields.field1.isDeprecated).to.equal(true);

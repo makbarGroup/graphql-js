@@ -214,16 +214,10 @@ union SomeUnion = Foo | Biz
     expect(deprecatedFieldDef.deprecationReason).to.equal('not used anymore');
 
     const deprecatedEnumDef = extendedSchema
-      .getType('EnumWithDeprecatedValue');
-    expect(deprecatedEnumDef.getValues()).to.deep.equal([
-      {
-        name: 'DEPRECATED',
-        description: '',
-        isDeprecated: true,
-        deprecationReason: 'do not use',
-        value: 'DEPRECATED'
-      }
-    ]);
+      .getType('EnumWithDeprecatedValue')
+      .getValues()[0];
+    expect(deprecatedEnumDef.isDeprecated).to.equal(true);
+    expect(deprecatedEnumDef.deprecationReason).to.equal('do not use');
   });
 
   it('extends objects with deprecated fields', () => {
