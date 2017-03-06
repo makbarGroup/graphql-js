@@ -265,6 +265,54 @@ function resolveThunk<T>(thunk: Thunk<T>): T {
   return typeof thunk === 'function' ? thunk() : thunk;
 }
 
+export class GraphQLAppliedDirectives {
+  _appliedDirectivesConfig: GraphQLAppliedDirectivesConfig;
+  _argsMap: GraphQLDirectiveArgsMap;
+
+  constructor(config: GraphQLAppliedDirectivesConfig) {
+    invariant(
+      isPlainObj(config),
+      'Applied directives must be an object with directive names as keys.'
+    );
+
+    this._appliedDirectivesConfig = config;
+    this._argsMap = {};
+  }
+
+  isApplied(directiveName: string): boolean {
+    return Boolean(this._appliedDirectivesConfig[directiveName]);
+  }
+
+  getAppliedDirectives(): Array<string> {
+    return Object.keys(this._appliedDirectivesConfig);
+  }
+
+  getDirectiveArgs(directiveName: string): ?{ [argName: string]: any } {
+    if (this._argsMap[directiveName]) {
+      return this._argsMap[directiveName];
+    }
+    const argsThunk = this._appliedDirectivesConfig[directiveName];
+    const args = resolveThunk(argsThunk);
+    if (!args) {
+      return null;
+    }
+    invariant(
+      isPlainObj(args),
+      `@${directiveName} args must be an object with argument names as keys ` +
+      'or a function which returns such an object.'
+    );
+    this._argsMap[directiveName] = args;
+    return args;
+  }
+}
+
+type GraphQLDirectiveArgsMap = {
+  [key: string]: { [argName: string]: any }
+};
+
+type GraphQLAppliedDirectivesConfig = {
+  [key: string]: Thunk<*>
+};
 
 /**
  * Scalar Type Definition
@@ -286,6 +334,7 @@ function resolveThunk<T>(thunk: Thunk<T>): T {
 export class GraphQLScalarType {
   name: string;
   description: ?string;
+  appliedDirectives: ?GraphQLAppliedDirectives;
 
   _scalarConfig: GraphQLScalarTypeConfig<*, *>;
 
@@ -293,6 +342,7 @@ export class GraphQLScalarType {
     assertValidName(config.name);
     this.name = config.name;
     this.description = config.description;
+    this.appliedDirectives = config.appliedDirectives;
     invariant(
       typeof config.serialize === 'function',
       `${this.name} must provide "serialize" function. If this custom Scalar ` +
@@ -344,6 +394,7 @@ GraphQLScalarType.prototype.toJSON =
 export type GraphQLScalarTypeConfig<TInternal, TExternal> = {
   name: string;
   description?: ?string;
+  appliedDirectives?: ?GraphQLAppliedDirectives;
   serialize: (value: mixed) => ?TExternal;
   parseValue?: (value: mixed) => ?TInternal;
   parseLiteral?: (valueNode: ValueNode) => ?TInternal;
@@ -391,6 +442,7 @@ export type GraphQLScalarTypeConfig<TInternal, TExternal> = {
 export class GraphQLObjectType {
   name: string;
   description: ?string;
+  appliedDirectives: ?GraphQLAppliedDirectives;
   isTypeOf: ?GraphQLIsTypeOfFn<*, *>;
 
   _typeConfig: GraphQLObjectTypeConfig<*, *>;
@@ -401,6 +453,7 @@ export class GraphQLObjectType {
     assertValidName(config.name, config.isIntrospection);
     this.name = config.name;
     this.description = config.description;
+    this.appliedDirectives = config.appliedDirectives;
     if (config.isTypeOf) {
       invariant(
         typeof config.isTypeOf === 'function',
@@ -535,7 +588,8 @@ function defineFieldMap<TSource, TContext>(
           name: argName,
           description: arg.description === undefined ? null : arg.description,
           type: arg.type,
-          defaultValue: arg.defaultValue
+          defaultValue: arg.defaultValue,
+          appliedDirectives: arg.appliedDirectives,
         };
       });
     }
@@ -560,6 +614,7 @@ export type GraphQLObjectTypeConfig<TSource, TContext> = {
   isTypeOf?: ?GraphQLIsTypeOfFn<TSource, TContext>;
   description?: ?string;
   isIntrospection?: boolean;
+  appliedDirectives?: ?GraphQLAppliedDirectives;
 };
 
 export type GraphQLTypeResolver<TSource, TContext> = (
@@ -602,6 +657,7 @@ export type GraphQLFieldConfig<TSource, TContext> = {
   resolve?: GraphQLFieldResolver<TSource, TContext>;
   deprecationReason?: ?string;
   description?: ?string;
+  appliedDirectives?: ?GraphQLAppliedDirectives;
 };
 
 export type GraphQLFieldConfigArgumentMap = {
@@ -612,6 +668,7 @@ export type GraphQLArgumentConfig = {
   type: GraphQLInputType;
   defaultValue?: mixed;
   description?: ?string;
+  appliedDirectives?: ?GraphQLAppliedDirectives;
 };
 
 export type GraphQLFieldConfigMap<TSource, TContext> = {
@@ -626,6 +683,7 @@ export type GraphQLField<TSource, TContext> = {
   resolve?: GraphQLFieldResolver<TSource, TContext>;
   isDeprecated?: boolean;
   deprecationReason?: ?string;
+  appliedDirectives?: ?GraphQLAppliedDirectives;
 };
 
 export type GraphQLArgument = {
@@ -633,6 +691,7 @@ export type GraphQLArgument = {
   type: GraphQLInputType;
   defaultValue?: mixed;
   description?: ?string;
+  appliedDirectives?: ?GraphQLAppliedDirectives;
 };
 
 export type GraphQLFieldMap<TSource, TContext> = {
@@ -662,6 +721,7 @@ export type GraphQLFieldMap<TSource, TContext> = {
 export class GraphQLInterfaceType {
   name: string;
   description: ?string;
+  appliedDirectives: ?GraphQLAppliedDirectives;
   resolveType: ?GraphQLTypeResolver<*, *>;
 
   _typeConfig: GraphQLInterfaceTypeConfig<*, *>;
@@ -671,6 +731,7 @@ export class GraphQLInterfaceType {
     assertValidName(config.name);
     this.name = config.name;
     this.description = config.description;
+    this.appliedDirectives = config.appliedDirectives;
     if (config.resolveType) {
       invariant(
         typeof config.resolveType === 'function',
@@ -708,7 +769,8 @@ export type GraphQLInterfaceTypeConfig<TSource, TContext> = {
    * Object type.
    */
   resolveType?: ?GraphQLTypeResolver<TSource, TContext>,
-  description?: ?string
+  description?: ?string,
+  appliedDirectives?: ?GraphQLAppliedDirectives,
 };
 
 
@@ -739,6 +801,7 @@ export type GraphQLInterfaceTypeConfig<TSource, TContext> = {
 export class GraphQLUnionType {
   name: string;
   description: ?string;
+  appliedDirectives: ?GraphQLAppliedDirectives;
   resolveType: ?GraphQLTypeResolver<*, *>;
 
   _typeConfig: GraphQLUnionTypeConfig<*, *>;
@@ -749,6 +812,7 @@ export class GraphQLUnionType {
     assertValidName(config.name);
     this.name = config.name;
     this.description = config.description;
+    this.appliedDirectives = config.appliedDirectives;
     if (config.resolveType) {
       invariant(
         typeof config.resolveType === 'function',
@@ -819,6 +883,7 @@ export type GraphQLUnionTypeConfig<TSource, TContext> = {
    */
   resolveType?: ?GraphQLTypeResolver<TSource, TContext>;
   description?: ?string;
+  appliedDirectives?: ?GraphQLAppliedDirectives;
 };
 
 
@@ -847,6 +912,7 @@ export type GraphQLUnionTypeConfig<TSource, TContext> = {
 export class GraphQLEnumType/* <T> */ {
   name: string;
   description: ?string;
+  appliedDirectives: ?GraphQLAppliedDirectives;
 
   _enumConfig: GraphQLEnumTypeConfig/* <T> */;
   _values: Array<GraphQLEnumValue/* <T> */>;
@@ -857,6 +923,7 @@ export class GraphQLEnumType/* <T> */ {
     this.name = config.name;
     assertValidName(config.name, config.isIntrospection);
     this.description = config.description;
+    this.appliedDirectives = config.appliedDirectives;
     this._values = defineEnumValues(this, config.values);
     this._enumConfig = config;
   }
@@ -958,6 +1025,7 @@ function defineEnumValues(
       description: value.description,
       isDeprecated: Boolean(value.deprecationReason),
       deprecationReason: value.deprecationReason,
+      appliedDirectives: value.appliedDirectives,
       value: isNullish(value.value) ? valueName : value.value,
     };
   });
@@ -967,6 +1035,7 @@ export type GraphQLEnumTypeConfig/* <T> */ = {
   name: string;
   values: GraphQLEnumValueConfigMap/* <T> */;
   description?: ?string;
+  appliedDirectives?: ?GraphQLAppliedDirectives;
   isIntrospection?: boolean;
 };
 
@@ -978,6 +1047,7 @@ export type GraphQLEnumValueConfig/* <T> */ = {
   value?: any/* T */;
   deprecationReason?: ?string;
   description?: ?string;
+  appliedDirectives?: ?GraphQLAppliedDirectives;
 };
 
 export type GraphQLEnumValue/* <T> */ = {
@@ -985,6 +1055,7 @@ export type GraphQLEnumValue/* <T> */ = {
   description: ?string;
   isDeprecated?: boolean;
   deprecationReason: ?string;
+  appliedDirectives: ?GraphQLAppliedDirectives;
   value: any/* T */;
 };
 
@@ -1013,6 +1084,7 @@ export type GraphQLEnumValue/* <T> */ = {
 export class GraphQLInputObjectType {
   name: string;
   description: ?string;
+  appliedDirectives: ?GraphQLAppliedDirectives;
 
   _typeConfig: GraphQLInputObjectTypeConfig;
   _fields: GraphQLInputFieldMap;
@@ -1021,6 +1093,7 @@ export class GraphQLInputObjectType {
     assertValidName(config.name);
     this.name = config.name;
     this.description = config.description;
+    this.appliedDirectives = config.appliedDirectives;
     this._typeConfig = config;
   }
 
@@ -1080,12 +1153,14 @@ export type GraphQLInputObjectTypeConfig = {
   name: string;
   fields: Thunk<GraphQLInputFieldConfigMap>;
   description?: ?string;
+  appliedDirectives?: ?GraphQLAppliedDirectives;
 };
 
 export type GraphQLInputFieldConfig = {
   type: GraphQLInputType;
   defaultValue?: mixed;
   description?: ?string;
+  appliedDirectives?: ?GraphQLAppliedDirectives;
 };
 
 export type GraphQLInputFieldConfigMap = {
@@ -1097,6 +1172,7 @@ export type GraphQLInputField = {
   type: GraphQLInputType;
   defaultValue?: mixed;
   description?: ?string;
+  appliedDirectives?: ?GraphQLAppliedDirectives;
 };
 
 export type GraphQLInputFieldMap = {

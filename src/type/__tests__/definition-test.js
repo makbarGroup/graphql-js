@@ -180,7 +180,8 @@ describe('Type System: Example', () => {
       description: undefined,
       isDeprecated: true,
       deprecationReason: 'Just because',
-      value: 'foo'
+      value: 'foo',
+      appliedDirectives: undefined,
     });
   });
 

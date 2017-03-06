@@ -9,21 +9,30 @@
  */
 
 import {
+  GraphQLScalarType,
+  GraphQLEnumType,
   GraphQLObjectType,
   GraphQLInputObjectType,
   GraphQLInterfaceType,
   GraphQLUnionType,
   GraphQLList,
-  GraphQLNonNull
+  GraphQLNonNull,
+  GraphQLAppliedDirectives,
 } from './definition';
 import type {
   GraphQLType,
   GraphQLNamedType,
   GraphQLAbstractType
 } from './definition';
-import { GraphQLDirective, specifiedDirectives } from './directives';
+import {
+  GraphQLDirective,
+  specifiedDirectives,
+  DirectiveLocation,
+} from './directives';
+import type {DirectiveLocationEnum} from './directives';
 import { __Schema } from './introspection';
 import find from '../jsutils/find';
+import keyMap from '../jsutils/keyMap';
 import invariant from '../jsutils/invariant';
 import { isEqualType, isTypeSubTypeOf } from '../utilities/typeComparators';
 
@@ -64,6 +73,7 @@ export class GraphQLSchema {
   _possibleTypeMap: ?{
     [abstractName: string]: { [possibleName: string]: boolean }
   };
+  _appliedDirectives: ?GraphQLAppliedDirectives;
 
   constructor(config: GraphQLSchemaConfig) {
     invariant(
@@ -151,6 +161,8 @@ export class GraphQLSchema {
         );
       }
     });
+
+    assertAppliedDirectivesLocations(this);
   }
 
   getQueryType(): GraphQLObjectType {
@@ -217,6 +229,10 @@ export class GraphQLSchema {
   getDirective(name: string): ?GraphQLDirective {
     return find(this.getDirectives(), directive => directive.name === name);
   }
+
+  getAppliedDirecives(): ?GraphQLAppliedDirectives {
+    return this._appliedDirectives;
+  }
 }
 
 type TypeMap = { [typeName: string]: GraphQLNamedType };
@@ -279,6 +295,78 @@ function typeMapReducer(map: TypeMap, type: ?GraphQLType): TypeMap {
   }
 
   return reducedMap;
+}
+
+function assertAppliedDirectivesLocations(schema: GraphQLSchema) {
+  const directives = keyMap(
+      schema.getDirectives(),
+      directive => directive.name
+  );
+
+  assertLocation(
+    {appliedDirectives: schema.getAppliedDirecives()},
+    DirectiveLocation.SCHEMA
+  );
+  schema.getDirectives().map(directive =>
+    assertDirectiveLocationOnArgs(directive.args)
+  );
+
+  const typeMap = schema.getTypeMap();
+  Object.keys(typeMap).forEach(typeName => {
+    const type = typeMap[typeName];
+    if (type instanceof GraphQLScalarType) {
+      assertLocation(type, DirectiveLocation.SCALAR);
+    } else if (type instanceof GraphQLObjectType) {
+      assertDirectiveLocationOnFields(type.getFields());
+      assertLocation(type, DirectiveLocation.OBJECT);
+    } else if (type instanceof GraphQLInterfaceType) {
+      assertDirectiveLocationOnFields(type.getFields());
+      assertLocation(type, DirectiveLocation.INTERFACE);
+    } else if (type instanceof GraphQLUnionType) {
+      assertLocation(type, DirectiveLocation.UNION);
+    } else if (type instanceof GraphQLEnumType) {
+      type.getValues().forEach(enumValue =>
+        assertLocation(enumValue, DirectiveLocation.ENUM_VALUE)
+      );
+      assertLocation(type, DirectiveLocation.ENUM);
+    } else if (type instanceof GraphQLInputObjectType) {
+      const fieldMap = type.getFields();
+      Object.keys(fieldMap).forEach(fieldName => {
+        const field = fieldMap[fieldName];
+        assertLocation(field, DirectiveLocation.INPUT_FIELD_DEFINITION);
+      });
+      assertLocation(type, DirectiveLocation.INPUT_OBJECT);
+    }
+  });
+
+  function assertDirectiveLocationOnFields(fieldMap) {
+    Object.keys(fieldMap || {}).forEach(fieldName => {
+      const field = fieldMap[fieldName];
+      assertLocation(field, DirectiveLocation.FIELD_DEFINITION);
+      assertDirectiveLocationOnArgs(field.args);
+    });
+  }
+  function assertDirectiveLocationOnArgs(args) {
+    (args || []).forEach(
+      arg => assertLocation(arg, DirectiveLocation.ARGUMENT_DEFINITION)
+    );
+  }
+  function assertLocation(
+    object: {appliedDirectives: ?GraphQLAppliedDirectives},
+    location: DirectiveLocationEnum
+  ) {
+    if (!object.appliedDirectives) {
+      return;
+    }
+    object.appliedDirectives.getAppliedDirectives()
+      .map(directiveName => directives[directiveName])
+      .forEach(directive => {
+        invariant(
+          directive.locations.indexOf(location) !== -1,
+          `@${directive.name} directive is not supported on "${location}".`
+        );
+      });
+  }
 }
 
 function assertObjectImplementsInterface(

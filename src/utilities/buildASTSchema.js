@@ -68,6 +68,7 @@ import {
   GraphQLInputObjectType,
   GraphQLList,
   GraphQLNonNull,
+  GraphQLAppliedDirectives,
   isInputType,
   isOutputType,
 } from '../type/definition';
@@ -258,6 +259,12 @@ export function buildASTSchema(ast: DocumentNode): GraphQLSchema {
     directives.push(GraphQLDeprecatedDirective);
   }
 
+  const innerDirectivesMap = keyValMap(
+      directives,
+      directive => directive.name,
+      directive => directive
+  );
+
   return new GraphQLSchema({
     query: getObjectType(nodeMap[queryTypeName]),
     mutation: mutationTypeName ?
@@ -268,7 +275,23 @@ export function buildASTSchema(ast: DocumentNode): GraphQLSchema {
       null,
     types,
     directives,
+    appliedDirectives: schemaDef && makeAppliedDirectives(schemaDef.directives)
   });
+
+  function makeAppliedDirectives(appliedDirectives: ?Array<DirectiveNode>) {
+    return appliedDirectives && new GraphQLAppliedDirectives(keyValMap(
+      appliedDirectives,
+      directive => directive.name.value,
+      directive => (() => {
+        const directiveName = directive.name.value;
+        if (!innerDirectivesMap[directiveName]) {
+          throw new Error(
+            `Directive "${directiveName}" not found in document.`);
+        }
+        return getArgumentValues(innerDirectivesMap[directiveName], directive);
+      })
+    ));
+  }
 
   function getDirective(
     directiveNode: DirectiveDefinitionNode
@@ -368,6 +391,7 @@ export function buildASTSchema(ast: DocumentNode): GraphQLSchema {
       description: getDescription(def),
       fields: () => makeFieldDefMap(def),
       interfaces: () => makeImplementedInterfaces(def),
+      appliedDirectives: makeAppliedDirectives(def.directives),
     });
   }
 
@@ -381,7 +405,8 @@ export function buildASTSchema(ast: DocumentNode): GraphQLSchema {
         type: produceOutputType(field.type),
         description: getDescription(field),
         args: makeInputValues(field.arguments),
-        deprecationReason: getDeprecationReason(field.directives)
+        deprecationReason: getDeprecationReason(field.directives),
+        appliedDirectives: makeAppliedDirectives(field.directives),
       })
     );
   }
@@ -400,7 +425,8 @@ export function buildASTSchema(ast: DocumentNode): GraphQLSchema {
         return {
           type,
           description: getDescription(value),
-          defaultValue: valueFromAST(value.defaultValue, type)
+          defaultValue: valueFromAST(value.defaultValue, type),
+          appliedDirectives: makeAppliedDirectives(value.directives),
         };
       }
     );
@@ -412,6 +438,7 @@ export function buildASTSchema(ast: DocumentNode): GraphQLSchema {
       name: typeName,
       description: getDescription(def),
       fields: () => makeFieldDefMap(def),
+      appliedDirectives: makeAppliedDirectives(def.directives),
       resolveType: cannotExecuteSchema,
     });
   }
@@ -425,9 +452,11 @@ export function buildASTSchema(ast: DocumentNode): GraphQLSchema {
         enumValue => enumValue.name.value,
         enumValue => ({
           description: getDescription(enumValue),
-          deprecationReason: getDeprecationReason(enumValue.directives)
+          deprecationReason: getDeprecationReason(enumValue.directives),
+          appliedDirectives: makeAppliedDirectives(enumValue.directives),
         })
       ),
+      appliedDirectives: makeAppliedDirectives(def.directives),
     });
 
     return enumType;
@@ -439,6 +468,7 @@ export function buildASTSchema(ast: DocumentNode): GraphQLSchema {
       description: getDescription(def),
       types: def.types.map(t => produceObjectType(t)),
       resolveType: cannotExecuteSchema,
+      appliedDirectives: makeAppliedDirectives(def.directives),
     });
   }
 
@@ -446,6 +476,7 @@ export function buildASTSchema(ast: DocumentNode): GraphQLSchema {
     return new GraphQLScalarType({
       name: def.name.value,
       description: getDescription(def),
+      appliedDirectives: makeAppliedDirectives(def.directives),
       serialize: () => null,
       // Note: validation calls the parse functions to determine if a
       // literal value is correct. Returning null would cause use of custom
@@ -461,6 +492,7 @@ export function buildASTSchema(ast: DocumentNode): GraphQLSchema {
       name: def.name.value,
       description: getDescription(def),
       fields: () => makeInputValues(def.fields),
+      appliedDirectives: makeAppliedDirectives(def.directives),
     });
   }
 }
