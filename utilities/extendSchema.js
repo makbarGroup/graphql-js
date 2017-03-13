@@ -35,6 +35,8 @@ var _scalars = require('../type/scalars');
 
 var _kinds = require('../language/kinds');
 
+var _values = require('../execution/values');
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
 /**
@@ -49,16 +51,6 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'd
  * This algorithm copies the provided schema, applying extensions while
  * producing the copy. The original schema remains unaltered.
  */
-
-/**
- *  Copyright (c) 2015, Facebook, Inc.
- *  All rights reserved.
- *
- *  This source code is licensed under the BSD-style license found in the
- *  LICENSE file in the root directory of this source tree. An additional grant
- *  of patent rights can be found in the PATENTS file in the same directory.
- */
-
 function extendSchema(schema, documentAST) {
   (0, _invariant2.default)(schema instanceof _schema.GraphQLSchema, 'Must provide valid GraphQLSchema');
 
@@ -166,14 +158,35 @@ function extendSchema(schema, documentAST) {
     types.push(getTypeFromAST(typeDefinitionMap[typeName]));
   });
 
+  var directives = getMergedDirectives();
+  var innerDirectivesMap = (0, _keyValMap2.default)(directives, function (directive) {
+    return directive.name;
+  }, function (directive) {
+    return directive;
+  });
+
   // Then produce and return a Schema with these types.
   return new _schema.GraphQLSchema({
     query: queryType,
     mutation: mutationType,
     subscription: subscriptionType,
     types: types,
-    directives: getMergedDirectives()
+    directives: directives
   });
+
+  function makeAppliedDirectives(appliedDirectives) {
+    return appliedDirectives && new _definition.GraphQLAppliedDirectives((0, _keyValMap2.default)(appliedDirectives, function (directive) {
+      return directive.name.value;
+    }, function (directive) {
+      return function () {
+        var directiveName = directive.name.value;
+        if (!innerDirectivesMap[directiveName]) {
+          throw new Error('Directive "' + directiveName + '" not found in document.');
+        }
+        return (0, _values.getArgumentValues)(innerDirectivesMap[directiveName], directive);
+      };
+    }));
+  }
 
   // Below are functions used for producing this schema that have closed over
   // this scope and have access to the schema, cache, and newly defined types.
@@ -348,7 +361,8 @@ function extendSchema(schema, documentAST) {
           newFieldMap[fieldName] = {
             description: (0, _buildASTSchema.getDescription)(field),
             type: buildOutputFieldType(field.type),
-            args: buildInputValues(field.arguments)
+            args: buildInputValues(field.arguments),
+            appliedDirectives: makeAppliedDirectives(field.directives)
           };
         });
       });
@@ -523,6 +537,14 @@ function extendSchema(schema, documentAST) {
     return getOutputTypeFromAST(typeNode);
   }
 }
+/**
+ *  Copyright (c) 2015, Facebook, Inc.
+ *  All rights reserved.
+ *
+ *  This source code is licensed under the BSD-style license found in the
+ *  LICENSE file in the root directory of this source tree. An additional grant
+ *  of patent rights can be found in the PATENTS file in the same directory.
+ */
 
 function cannotExecuteExtendedSchema() {
   throw new Error('Extended Schema cannot use Interface or Union types for execution.');

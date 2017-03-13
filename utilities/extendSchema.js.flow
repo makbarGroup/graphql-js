@@ -25,6 +25,7 @@ import {
   GraphQLScalarType,
   GraphQLEnumType,
   GraphQLInputObjectType,
+  GraphQLAppliedDirectives,
   isInputType,
   isOutputType,
 } from '../type/definition';
@@ -79,6 +80,7 @@ import type {
 
 import type {
   DocumentNode,
+  DirectiveNode,
   InputValueDefinitionNode,
   TypeNode,
   NamedTypeNode,
@@ -92,6 +94,7 @@ import type {
   DirectiveDefinitionNode,
 } from '../language/ast';
 
+import { getArgumentValues } from '../execution/values';
 
 /**
  * Produces a new schema given an existing schema and a document which may
@@ -242,14 +245,36 @@ export function extendSchema(
     types.push(getTypeFromAST(typeDefinitionMap[typeName]));
   });
 
+  const directives = getMergedDirectives();
+  const innerDirectivesMap = keyValMap(
+      directives,
+      directive => directive.name,
+      directive => directive
+  );
+
   // Then produce and return a Schema with these types.
   return new GraphQLSchema({
     query: queryType,
     mutation: mutationType,
     subscription: subscriptionType,
     types,
-    directives: getMergedDirectives(),
+    directives,
   });
+
+  function makeAppliedDirectives(appliedDirectives: ?Array<DirectiveNode>) {
+    return appliedDirectives && new GraphQLAppliedDirectives(keyValMap(
+      appliedDirectives,
+      directive => directive.name.value,
+      directive => (() => {
+        const directiveName = directive.name.value;
+        if (!innerDirectivesMap[directiveName]) {
+          throw new Error(
+            `Directive "${directiveName}" not found in document.`);
+        }
+        return getArgumentValues(innerDirectivesMap[directiveName], directive);
+      })
+    ));
+  }
 
   // Below are functions used for producing this schema that have closed over
   // this scope and have access to the schema, cache, and newly defined types.
@@ -431,6 +456,7 @@ export function extendSchema(
             description: getDescription(field),
             type: buildOutputFieldType(field.type),
             args: buildInputValues(field.arguments),
+            appliedDirectives: makeAppliedDirectives(field.directives),
           };
         });
       });
