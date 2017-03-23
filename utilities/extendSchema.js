@@ -287,6 +287,7 @@ function extendSchema(schema, documentAST) {
       fields: function fields() {
         return extendFieldMap(type);
       },
+      appliedDirectives: type.appliedDirectives,
       isTypeOf: type.isTypeOf
     });
   }
@@ -298,6 +299,7 @@ function extendSchema(schema, documentAST) {
       fields: function fields() {
         return extendFieldMap(type);
       },
+      appliedDirectives: type.appliedDirectives,
       resolveType: type.resolveType
     });
   }
@@ -307,6 +309,7 @@ function extendSchema(schema, documentAST) {
       name: type.name,
       description: type.description,
       types: type.getTypes().map(getTypeFromDef),
+      appliedDirectives: type.appliedDirectives,
       resolveType: type.resolveType
     });
   }
@@ -345,6 +348,7 @@ function extendSchema(schema, documentAST) {
         args: (0, _keyMap2.default)(field.args, function (arg) {
           return arg.name;
         }),
+        appliedDirectives: field.appliedDirectives,
         resolve: field.resolve
       };
     });
@@ -408,7 +412,8 @@ function extendSchema(schema, documentAST) {
       },
       fields: function fields() {
         return buildFieldMap(typeNode);
-      }
+      },
+      appliedDirectives: makeAppliedDirectives(typeNode.directives)
     });
   }
 
@@ -419,6 +424,7 @@ function extendSchema(schema, documentAST) {
       fields: function fields() {
         return buildFieldMap(typeNode);
       },
+      appliedDirectives: makeAppliedDirectives(typeNode.directives),
       resolveType: cannotExecuteExtendedSchema
     });
   }
@@ -428,6 +434,7 @@ function extendSchema(schema, documentAST) {
       name: typeNode.name.value,
       description: (0, _buildASTSchema.getDescription)(typeNode),
       types: typeNode.types.map(getObjectTypeFromAST),
+      appliedDirectives: makeAppliedDirectives(typeNode.directives),
       resolveType: cannotExecuteExtendedSchema
     });
   }
@@ -436,6 +443,7 @@ function extendSchema(schema, documentAST) {
     return new _definition.GraphQLScalarType({
       name: typeNode.name.value,
       description: (0, _buildASTSchema.getDescription)(typeNode),
+      appliedDirectives: makeAppliedDirectives(typeNode.directives),
       serialize: function serialize(id) {
         return id;
       },
@@ -460,7 +468,8 @@ function extendSchema(schema, documentAST) {
         return v.name.value;
       }, function () {
         return {};
-      })
+      }),
+      appliedDirectives: makeAppliedDirectives(typeNode.directives)
     });
   }
 
@@ -470,7 +479,8 @@ function extendSchema(schema, documentAST) {
       description: (0, _buildASTSchema.getDescription)(typeNode),
       fields: function fields() {
         return buildInputValues(typeNode.fields);
-      }
+      },
+      appliedDirectives: makeAppliedDirectives(typeNode.directives)
     });
   }
 
@@ -495,7 +505,8 @@ function extendSchema(schema, documentAST) {
       return {
         type: buildOutputFieldType(field.type),
         description: (0, _buildASTSchema.getDescription)(field),
-        args: buildInputValues(field.arguments)
+        args: buildInputValues(field.arguments),
+        appliedDirectives: makeAppliedDirectives(field.directives)
       };
     });
   }
@@ -508,7 +519,8 @@ function extendSchema(schema, documentAST) {
       return {
         type: type,
         description: (0, _buildASTSchema.getDescription)(value),
-        defaultValue: (0, _valueFromAST.valueFromAST)(value.defaultValue, type)
+        defaultValue: (0, _valueFromAST.valueFromAST)(value.defaultValue, type),
+        appliedDirectives: makeAppliedDirectives(value.directives)
       };
     });
   }

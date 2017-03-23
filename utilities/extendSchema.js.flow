@@ -375,6 +375,7 @@ export function extendSchema(
       description: type.description,
       interfaces: () => extendImplementedInterfaces(type),
       fields: () => extendFieldMap(type),
+      appliedDirectives: type.appliedDirectives,
       isTypeOf: type.isTypeOf,
     });
   }
@@ -386,6 +387,7 @@ export function extendSchema(
       name: type.name,
       description: type.description,
       fields: () => extendFieldMap(type),
+      appliedDirectives: type.appliedDirectives,
       resolveType: type.resolveType,
     });
   }
@@ -395,6 +397,7 @@ export function extendSchema(
       name: type.name,
       description: type.description,
       types: type.getTypes().map(getTypeFromDef),
+      appliedDirectives: type.appliedDirectives,
       resolveType: type.resolveType,
     });
   }
@@ -435,6 +438,7 @@ export function extendSchema(
         deprecationReason: field.deprecationReason,
         type: extendFieldType(field.type),
         args: keyMap(field.args, arg => arg.name),
+        appliedDirectives: field.appliedDirectives,
         resolve: field.resolve,
       };
     });
@@ -493,6 +497,7 @@ export function extendSchema(
       description: getDescription(typeNode),
       interfaces: () => buildImplementedInterfaces(typeNode),
       fields: () => buildFieldMap(typeNode),
+      appliedDirectives: makeAppliedDirectives(typeNode.directives),
     });
   }
 
@@ -501,6 +506,7 @@ export function extendSchema(
       name: typeNode.name.value,
       description: getDescription(typeNode),
       fields: () => buildFieldMap(typeNode),
+      appliedDirectives: makeAppliedDirectives(typeNode.directives),
       resolveType: cannotExecuteExtendedSchema,
     });
   }
@@ -510,6 +516,7 @@ export function extendSchema(
       name: typeNode.name.value,
       description: getDescription(typeNode),
       types: typeNode.types.map(getObjectTypeFromAST),
+      appliedDirectives: makeAppliedDirectives(typeNode.directives),
       resolveType: cannotExecuteExtendedSchema,
     });
   }
@@ -518,6 +525,7 @@ export function extendSchema(
     return new GraphQLScalarType({
       name: typeNode.name.value,
       description: getDescription(typeNode),
+      appliedDirectives: makeAppliedDirectives(typeNode.directives),
       serialize: id => id,
       // Note: validation calls the parse functions to determine if a
       // literal value is correct. Returning null would cause use of custom
@@ -533,6 +541,7 @@ export function extendSchema(
       name: typeNode.name.value,
       description: getDescription(typeNode),
       values: keyValMap(typeNode.values, v => v.name.value, () => ({})),
+      appliedDirectives: makeAppliedDirectives(typeNode.directives),
     });
   }
 
@@ -541,6 +550,7 @@ export function extendSchema(
       name: typeNode.name.value,
       description: getDescription(typeNode),
       fields: () => buildInputValues(typeNode.fields),
+      appliedDirectives: makeAppliedDirectives(typeNode.directives),
     });
   }
 
@@ -570,6 +580,7 @@ export function extendSchema(
         type: buildOutputFieldType(field.type),
         description: getDescription(field),
         args: buildInputValues(field.arguments),
+        appliedDirectives: makeAppliedDirectives(field.directives),
       })
     );
   }
@@ -583,7 +594,8 @@ export function extendSchema(
         return {
           type,
           description: getDescription(value),
-          defaultValue: valueFromAST(value.defaultValue, type)
+          defaultValue: valueFromAST(value.defaultValue, type),
+          appliedDirectives: makeAppliedDirectives(value.directives),
         };
       }
     );
