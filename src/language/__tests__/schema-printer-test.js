@@ -111,6 +111,10 @@ describe('Printer', () => {
 
       scalar AnnotatedScalar @onScalar
 
+      scalar StringEncodedCustomScalar = String
+
+      scalar AnnotatedScalar @onScalar
+
       extend scalar CustomScalar @onScalar
 
       enum Site {

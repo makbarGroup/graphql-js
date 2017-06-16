@@ -442,6 +442,7 @@ export class ASTDefinitionBuilder {
     return new GraphQLScalarType({
       name: def.name.value,
       description: getDescription(def, this._options),
+      ofType: def.type && this.buildType(def.type),
       astNode: def,
       serialize: value => value,
     });

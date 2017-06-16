@@ -712,6 +712,7 @@ type Hello {
         {
           kind: 'ScalarTypeDefinition',
           name: nameNode('Hello', { start: 7, end: 12 }),
+          type: null,
           directives: [],
           loc: { start: 0, end: 12 },
         },

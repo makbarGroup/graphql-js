@@ -1307,8 +1307,8 @@ describe('Introspection', () => {
             'An enum describing what kind of type a given `__Type` is.',
           enumValues: [
             {
-              description: 'Indicates this type is a scalar.',
-              name: 'SCALAR',
+              description: 'Indicates this type is a scalar. `ofType` is a valid field.',
+              name: 'SCALAR'
             },
             {
               description:

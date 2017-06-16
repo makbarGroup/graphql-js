@@ -208,9 +208,13 @@ export function buildClientSchema(
   function buildScalarDef(
     scalarIntrospection: IntrospectionScalarType,
   ): GraphQLScalarType {
+    const ofType = scalarIntrospection.ofType ?
+      getType(scalarIntrospection.ofType) :
+      undefined;
     return new GraphQLScalarType({
       name: scalarIntrospection.name,
       description: scalarIntrospection.description,
+      ofType,
       serialize: value => value,
     });
   }

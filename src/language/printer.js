@@ -111,7 +111,7 @@ const printDocASTReducer = {
   OperationTypeDefinition: ({ operation, type }) => operation + ': ' + type,
 
   ScalarTypeDefinition: addDescription(({ name, directives }) =>
-    join(['scalar', name, join(directives, ' ')], ' '),
+    join(['scalar', name, wrap(' = ', type), join(directives, ' ')], ' '),
   ),
 
   ObjectTypeDefinition: addDescription(
