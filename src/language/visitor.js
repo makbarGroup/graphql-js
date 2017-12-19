@@ -245,7 +245,7 @@ export function visit(
   do {
     stack.index++;
     let isLeaving = stack.index === stack.keys.length;
-    let isEdited = isLeaving && stack.edits.length !== 0;
+    let isEdited = false;
     // eslint-disable-next-line no-undef-init
     let key: any = undefined;
 
@@ -253,8 +253,9 @@ export function visit(
       key = path[path.length - 1];
       node = parent;
       parent = ancestors.pop();
-      if (isEdited) {
+      if (stack.edits.length !== 0) {
         node = (stack.inArray ? patchArray : patchNode)(node, stack.edits);
+        isEdited = true;
       }
       stack = stack.prev;
     } else if (parent) {
