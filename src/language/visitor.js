@@ -238,7 +238,6 @@ export function visit(
   let parent: any = undefined;
   const path: any = [];
   const ancestors = [];
-  let newRoot = root;
   /* eslint-enable no-undef-init */
 
   do {
@@ -268,7 +267,7 @@ export function visit(
       }
       path.push(key);
     } else {
-      node = newRoot;
+      node = root;
     }
 
     if (!Array.isArray(node)) {
@@ -320,10 +319,10 @@ export function visit(
   } while (stack !== undefined);
 
   if (edits.length !== 0) {
-    newRoot = edits[edits.length - 1][1];
+    return edits[edits.length - 1][1];
   }
 
-  return newRoot;
+  return root;
 }
 
 function patchArray(array, edits: any): any {
