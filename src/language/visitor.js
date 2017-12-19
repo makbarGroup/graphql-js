@@ -258,15 +258,16 @@ export function visit(
       edits = stack.edits;
       inArray = stack.inArray;
       stack = stack.prev;
-    } else {
-      key = parent ? (inArray ? index : keys[index]) : undefined;
-      node = parent ? parent[key] : newRoot;
-      if (node === null || node === undefined) {
+    } else if (parent) {
+      key = inArray ? index : keys[index];
+      node = parent[key];
+      if (node == null) {
         continue;
       }
-      if (parent) {
-        path.push(key);
-      }
+      path.push(key);
+    } else {
+      key = undefined;
+      node = newRoot;
     }
 
     let result;
