@@ -228,22 +228,24 @@ export function visit(
   visitor: Visitor<ASTKindToNode>,
   visitorKeys: VisitorKeyMap<ASTKindToNode> = QueryDocumentKeys,
 ): any {
+  let stack: any = {
+    inArray: Array.isArray(root),
+    index: -1,
+    keys: [root],
+    edits: [],
+    prev: undefined,
+  };
   /* eslint-disable no-undef-init */
-  let stack: any = undefined;
-  let inArray = Array.isArray(root);
-  let keys: any = [root];
-  let index = -1;
-  let edits = [];
   let node: any = undefined;
   let parent: any = undefined;
+  /* eslint-enable no-undef-init */
   const path: any = [];
   const ancestors = [];
-  /* eslint-enable no-undef-init */
 
   do {
-    index++;
-    let isLeaving = index === keys.length;
-    let isEdited = isLeaving && edits.length !== 0;
+    stack.index++;
+    let isLeaving = stack.index === stack.keys.length;
+    let isEdited = isLeaving && stack.edits.length !== 0;
     // eslint-disable-next-line no-undef-init
     let key: any = undefined;
 
@@ -252,15 +254,11 @@ export function visit(
       node = parent;
       parent = ancestors.pop();
       if (isEdited) {
-        node = (inArray ? patchArray : patchNode)(node, edits);
+        node = (stack.inArray ? patchArray : patchNode)(node, stack.edits);
       }
-      index = stack.index;
-      keys = stack.keys;
-      edits = stack.edits;
-      inArray = stack.inArray;
       stack = stack.prev;
     } else if (parent) {
-      key = inArray ? index : keys[index];
+      key = stack.inArray ? stack.index : stack.keys[stack.index];
       node = parent[key];
       if (node == null) {
         continue;
@@ -297,7 +295,7 @@ export function visit(
     }
 
     if (isEdited) {
-      edits.push([key, node]);
+      stack.edits.push([key, node]);
       if (!isNode(node)) {
         isLeaving = true;
       }
@@ -306,18 +304,17 @@ export function visit(
     if (isLeaving) {
       path.pop();
     } else {
-      stack = { inArray, index, keys, edits, prev: stack };
-      inArray = Array.isArray(node);
-      keys = inArray ? node : visitorKeys[node.kind] || [];
-      index = -1;
-      edits = [];
+      const inArray = Array.isArray(node);
+      const keys = inArray ? node : visitorKeys[node.kind] || [];
+      stack = { inArray, index: -1, keys, edits: [], prev: stack };
       if (parent) {
         ancestors.push(parent);
       }
       parent = node;
     }
-  } while (stack !== undefined);
+  } while (stack.prev !== undefined);
 
+  const edits = stack.edits;
   if (edits.length !== 0) {
     return edits[edits.length - 1][1];
   }
