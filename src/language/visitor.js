@@ -235,7 +235,6 @@ export function visit(
   let index = -1;
   let edits = [];
   let node: any = undefined;
-  let key: any = undefined;
   let parent: any = undefined;
   const path: any = [];
   const ancestors = [];
@@ -246,8 +245,11 @@ export function visit(
     index++;
     let isLeaving = index === keys.length;
     let isEdited = isLeaving && edits.length !== 0;
+    // eslint-disable-next-line no-undef-init
+    let key: any = undefined;
+
     if (isLeaving) {
-      key = ancestors.length === 0 ? undefined : path[path.length - 1];
+      key = path[path.length - 1];
       node = parent;
       parent = ancestors.pop();
       if (isEdited) {
@@ -266,7 +268,6 @@ export function visit(
       }
       path.push(key);
     } else {
-      key = undefined;
       node = newRoot;
     }
 
