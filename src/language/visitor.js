@@ -251,31 +251,7 @@ export function visit(
       node = parent;
       parent = ancestors.pop();
       if (isEdited) {
-        if (inArray) {
-          node = node.slice();
-        } else {
-          const clone = {};
-          for (const k in node) {
-            if (node.hasOwnProperty(k)) {
-              clone[k] = node[k];
-            }
-          }
-          node = clone;
-        }
-        let editOffset = 0;
-        for (let ii = 0; ii < edits.length; ii++) {
-          let editKey: any = edits[ii][0];
-          const editValue = edits[ii][1];
-          if (inArray) {
-            editKey -= editOffset;
-          }
-          if (inArray && editValue === null) {
-            node.splice(editKey, 1);
-            editOffset++;
-          } else {
-            node[editKey] = editValue;
-          }
-        }
+        node = (inArray ? patchArray : patchNode)(node, edits);
       }
       index = stack.index;
       keys = stack.keys;
@@ -349,6 +325,33 @@ export function visit(
   }
 
   return newRoot;
+}
+
+function patchArray(array, edits: any): any {
+  const clone = array.slice();
+  let offset = 0;
+  for (const [key, value] of edits) {
+    if (value === null) {
+      clone.splice(key, 1);
+      offset++;
+    } else {
+      clone[key - offset] = value;
+    }
+  }
+  return clone;
+}
+
+function patchNode(node, edits: any): any {
+  const clone = {};
+  for (const key in node) {
+    if (node.hasOwnProperty(key)) {
+      clone[key] = node[key];
+    }
+  }
+  for (const [key, value] of edits) {
+    clone[key] = value;
+  }
+  return clone;
 }
 
 function isNode(maybeNode): boolean %checks {
