@@ -244,8 +244,8 @@ export function visit(
 
   do {
     index++;
-    const isLeaving = index === keys.length;
-    const isEdited = isLeaving && edits.length !== 0;
+    let isLeaving = index === keys.length;
+    let isEdited = isLeaving && edits.length !== 0;
     if (isLeaving) {
       key = ancestors.length === 0 ? undefined : path[path.length - 1];
       node = parent;
@@ -270,40 +270,37 @@ export function visit(
       node = newRoot;
     }
 
-    let result;
     if (!Array.isArray(node)) {
       if (!isNode(node)) {
         throw new Error('Invalid AST Node: ' + JSON.stringify(node));
       }
       const visitFn = getVisitFn(visitor, node.kind, isLeaving);
       if (visitFn) {
-        result = visitFn.call(visitor, node, key, parent, path, ancestors);
+        const result = visitFn.call(
+          visitor,
+          node,
+          key,
+          parent,
+          path,
+          ancestors,
+        );
 
         if (result === BREAK) {
           break;
-        }
-
-        if (result === false) {
-          if (!isLeaving) {
-            path.pop();
-            continue;
-          }
+        } else if (result === false) {
+          isLeaving = true;
         } else if (result !== undefined) {
-          edits.push([key, result]);
-          if (!isLeaving) {
-            if (isNode(result)) {
-              node = result;
-            } else {
-              path.pop();
-              continue;
-            }
-          }
+          node = result;
+          isEdited = true;
         }
       }
     }
 
-    if (result === undefined && isEdited) {
+    if (isEdited) {
       edits.push([key, node]);
+      if (!isNode(node)) {
+        isLeaving = true;
+      }
     }
 
     if (isLeaving) {
