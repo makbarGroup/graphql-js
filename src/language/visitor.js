@@ -315,12 +315,7 @@ export function visit(
     }
   } while (stack.prev !== undefined);
 
-  const edits = stack.edits;
-  if (edits.length !== 0) {
-    return edits[edits.length - 1][1];
-  }
-
-  return root;
+  return node;
 }
 
 function patchArray(array, edits: any): any {
