@@ -461,18 +461,6 @@ export class GraphQLScalarType {
     this.astNode = config.astNode;
     this._scalarConfig = config;
     invariant(typeof config.name === 'string', 'Must provide name.');
-    if (this.ofType) {
-      const ofTypeName = this.ofType.name;
-      invariant(
-        ofTypeName === 'String' ||
-        ofTypeName === 'Int' ||
-        ofTypeName === 'Float' ||
-        ofTypeName === 'Boolean' ||
-        ofTypeName === 'ID',
-        `${this.name} may only be described in terms of a built-in scalar ` +
-        `type. However ${ofTypeName} is not a built-in scalar type.`
-      );
-    }
     invariant(
       typeof config.serialize === 'function',
       `${this.name} must provide "serialize" function. If this custom Scalar ` +
@@ -498,7 +486,8 @@ export class GraphQLScalarType {
 
   // Parses an externally provided value to use as an input.
   parseValue(value: mixed): mixed {
-    const parser = this._scalarConfig.parseValue || (this.ofType && this.ofType.parseValue);
+    const parser =
+      this._scalarConfig.parseValue || (this.ofType && this.ofType.parseValue);
     if (isInvalid(value)) {
       return undefined;
     }
@@ -507,7 +496,9 @@ export class GraphQLScalarType {
 
   // Parses an externally provided literal value to use as an input.
   parseLiteral(valueNode: ValueNode, variables: ?ObjMap<mixed>): mixed {
-    const parser = this._scalarConfig.parseLiteral || (this.ofType && this.ofType.parseLiteral);
+    const parser =
+      this._scalarConfig.parseLiteral ||
+      (this.ofType && this.ofType.parseLiteral);
     return parser
       ? parser(valueNode, variables)
       : valueFromASTUntyped(valueNode, variables);

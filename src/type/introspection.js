@@ -207,7 +207,7 @@ export const __Type = new GraphQLObjectType({
     'The fundamental unit of any GraphQL Schema is the type. There are ' +
     'many kinds of types in GraphQL as represented by the `__TypeKind` enum.' +
     '\n\nDepending on the kind of a type, certain fields describe ' +
-    'information about that type. Scalar types provide a name, description' +
+    'information about that type. Scalar types provide a name, description ' +
     'and how they serialize, while Enum types provide their possible values. ' +
     'Object and Interface types provide the fields they describe. Abstract ' +
     'types, Union and Interface, provide the Object types possible ' +

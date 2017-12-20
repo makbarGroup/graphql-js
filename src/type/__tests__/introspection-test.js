@@ -1310,7 +1310,7 @@ describe('Introspection', () => {
               description:
                 'Indicates this type is a scalar. ' +
                 '`ofType` may represent how this scalar is serialized.',
-              name: 'SCALAR'
+              name: 'SCALAR',
             },
             {
               description:
