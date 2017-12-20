@@ -245,7 +245,6 @@ export function visit(
   do {
     stack.index++;
     let isLeaving = stack.index === stack.keys.length;
-    let isEdited = false;
     // eslint-disable-next-line no-undef-init
     let key: any = undefined;
 
@@ -255,7 +254,6 @@ export function visit(
       parent = ancestors.pop();
       if (stack.edits.length !== 0) {
         node = (stack.inArray ? patchArray : patchNode)(node, stack.edits);
-        isEdited = true;
       }
       stack = stack.prev;
     } else if (parent) {
@@ -290,19 +288,15 @@ export function visit(
           isLeaving = true;
         } else if (result !== undefined) {
           node = result;
-          isEdited = true;
+          isLeaving = isLeaving || !isNode(node);
         }
       }
     }
 
-    if (isEdited) {
-      stack.edits.push([key, node]);
-      if (!isNode(node)) {
-        isLeaving = true;
-      }
-    }
-
     if (isLeaving) {
+      if (parent && parent[key] !== node) {
+        stack.edits.push([key, node]);
+      }
       path.pop();
     } else {
       const inArray = Array.isArray(node);
