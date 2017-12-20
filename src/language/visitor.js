@@ -235,10 +235,9 @@ export function visit(
     edits: [],
     prev: undefined,
   };
-  /* eslint-disable no-undef-init */
-  let node: any = undefined;
+  let node: any = root;
+  // eslint-disable-next-line no-undef-init
   let parent: any = undefined;
-  /* eslint-enable no-undef-init */
   const path: any = [];
   const ancestors = [];
 
@@ -263,8 +262,6 @@ export function visit(
         continue;
       }
       path.push(key);
-    } else {
-      node = root;
     }
 
     if (!Array.isArray(node)) {
