@@ -238,14 +238,13 @@ export function visit(
   let node: any = root;
   // eslint-disable-next-line no-undef-init
   let parent: any = undefined;
-  const path: any = [];
+  const path = [];
   const ancestors = [];
 
   do {
     stack.index++;
     let isLeaving = stack.index === stack.keys.length;
-    // eslint-disable-next-line no-undef-init
-    let key: any = undefined;
+    let key;
 
     if (isLeaving) {
       key = path[path.length - 1];
